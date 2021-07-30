@@ -227,5 +227,5 @@ ipython_config.py
 #   git rm -r .ipynb_checkpoints/
 
 ### Data folders
-data/*/
+data/
 checkpoint.pth.tar
