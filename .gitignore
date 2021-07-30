@@ -227,3 +227,4 @@ ipython_config.py
 
 ### Data folders
 data/*/
+checkpoint.pth.tar
