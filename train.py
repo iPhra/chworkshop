@@ -130,15 +130,15 @@ def train(args):
     )
 
     model = _get_net().to(device)
+    optimizer = _get_optimizer(net=model, lr=args.lr, weight_decay=args.weight_decay)
+    criterion = nn.CrossEntropyLoss()
+
     if is_distributed and use_cuda:
         # multi-machine multi-gpu case
         model = torch.nn.parallel.DistributedDataParallel(model)
     else:
         # single-machine multi-gpu case or single-machine or multi-machine cpu case
         model = torch.nn.DataParallel(model)
-
-    optimizer = _get_optimizer(net=model, lr=args.lr, weight_decay=args.weight_decay)
-    criterion = nn.CrossEntropyLoss()
 
     for epoch in range(1, args.epochs + 1):
         model.train()
