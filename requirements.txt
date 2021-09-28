@@ -1,6 +1,5 @@
 boto3
-torch
-torchvision
+sagemaker
 numpy
 pandas
 matplotlib

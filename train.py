@@ -12,6 +12,8 @@ import torch.utils.data
 import torch.utils.data.distributed
 from torchvision import datasets, transforms, models
 
+from typing import Dict, List
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.StreamHandler(sys.stdout))
@@ -81,6 +83,68 @@ def _average_gradients(model):
     for param in model.parameters():
         dist.all_reduce(param.grad.data, op=dist.reduce_op.SUM)
         param.grad.data /= size
+        
+        
+def parse_arguments():
+    """
+    Parse the script input argument and some environment variables provided at runtime by 
+    Amazon SageMaker Training
+    """
+    parser = argparse.ArgumentParser()
+
+    # Data and model checkpoints directories
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=128,
+        metavar="N",
+        help="input batch size for training (default: 128)",
+    )
+    parser.add_argument(
+        "--test-batch-size",
+        type=int,
+        default=512,
+        metavar="N",
+        help="input batch size for testing (default: 512)",
+    )
+    parser.add_argument(
+        "--epochs",
+        type=int,
+        default=100,
+        metavar="N",
+        help="number of epochs to train (default: 100)",
+    )
+    parser.add_argument(
+        "--lr", type=float, default=1e-5, metavar="LR", help="learning rate (default: 0.00001)"
+    )
+    parser.add_argument(
+        "--weight_decay", type=float, default=5e-4, metavar="W", help="Adam weight decay (default: 0.0005)"
+    )
+    parser.add_argument("--seed", type=int, default=1, metavar="S", help="random seed (default: 1)")
+    parser.add_argument(
+        "--log-interval",
+        type=int,
+        default=64,
+        metavar="N",
+        help="how many batches to wait before logging training status",
+    )
+    parser.add_argument(
+        "--backend",
+        type=str,
+        default=None,
+        help="backend for distributed training (tcp, gloo on cpu and gloo, nccl on gpu)",
+    )
+
+    # Container environment
+    parser.add_argument("--hosts", type=list, default=json.loads(os.environ["SM_HOSTS"]))
+    parser.add_argument("--current-host", type=str, default=os.environ["SM_CURRENT_HOST"])
+    parser.add_argument("--model-dir", type=str, default=os.environ["SM_MODEL_DIR"])
+    parser.add_argument("--training-dir", type=str, default=os.environ["SM_CHANNEL_TRAINING"])
+    parser.add_argument("--testing-dir", type=str, default=os.environ["SM_CHANNEL_TESTING"])
+    parser.add_argument("--num-gpus", type=int, default=os.environ["SM_NUM_GPUS"])
+    
+    args = parser.parse_args()
+    return args
 
 
 def train(args):
@@ -202,57 +266,57 @@ def save_model(model, model_dir):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+#     parser = argparse.ArgumentParser()
 
-    # Data and model checkpoints directories
-    parser.add_argument(
-        "--batch-size",
-        type=int,
-        default=128,
-        metavar="N",
-        help="input batch size for training (default: 128)",
-    )
-    parser.add_argument(
-        "--test-batch-size",
-        type=int,
-        default=512,
-        metavar="N",
-        help="input batch size for testing (default: 512)",
-    )
-    parser.add_argument(
-        "--epochs",
-        type=int,
-        default=100,
-        metavar="N",
-        help="number of epochs to train (default: 100)",
-    )
-    parser.add_argument(
-        "--lr", type=float, default=1e-5, metavar="LR", help="learning rate (default: 0.00001)"
-    )
-    parser.add_argument(
-        "--weight_decay", type=float, default=5e-4, metavar="W", help="Adam weight decay (default: 0.0005)"
-    )
-    parser.add_argument("--seed", type=int, default=1, metavar="S", help="random seed (default: 1)")
-    parser.add_argument(
-        "--log-interval",
-        type=int,
-        default=64,
-        metavar="N",
-        help="how many batches to wait before logging training status",
-    )
-    parser.add_argument(
-        "--backend",
-        type=str,
-        default=None,
-        help="backend for distributed training (tcp, gloo on cpu and gloo, nccl on gpu)",
-    )
+#     # Data and model checkpoints directories
+#     parser.add_argument(
+#         "--batch-size",
+#         type=int,
+#         default=128,
+#         metavar="N",
+#         help="input batch size for training (default: 128)",
+#     )
+#     parser.add_argument(
+#         "--test-batch-size",
+#         type=int,
+#         default=512,
+#         metavar="N",
+#         help="input batch size for testing (default: 512)",
+#     )
+#     parser.add_argument(
+#         "--epochs",
+#         type=int,
+#         default=100,
+#         metavar="N",
+#         help="number of epochs to train (default: 100)",
+#     )
+#     parser.add_argument(
+#         "--lr", type=float, default=1e-5, metavar="LR", help="learning rate (default: 0.00001)"
+#     )
+#     parser.add_argument(
+#         "--weight_decay", type=float, default=5e-4, metavar="W", help="Adam weight decay (default: 0.0005)"
+#     )
+#     parser.add_argument("--seed", type=int, default=1, metavar="S", help="random seed (default: 1)")
+#     parser.add_argument(
+#         "--log-interval",
+#         type=int,
+#         default=64,
+#         metavar="N",
+#         help="how many batches to wait before logging training status",
+#     )
+#     parser.add_argument(
+#         "--backend",
+#         type=str,
+#         default=None,
+#         help="backend for distributed training (tcp, gloo on cpu and gloo, nccl on gpu)",
+#     )
 
-    # Container environment
-    parser.add_argument("--hosts", type=list, default=json.loads(os.environ["SM_HOSTS"]))
-    parser.add_argument("--current-host", type=str, default=os.environ["SM_CURRENT_HOST"])
-    parser.add_argument("--model-dir", type=str, default=os.environ["SM_MODEL_DIR"])
-    parser.add_argument("--training-dir", type=str, default=os.environ["SM_CHANNEL_TRAINING"])
-    parser.add_argument("--testing-dir", type=str, default=os.environ["SM_CHANNEL_TESTING"])
-    parser.add_argument("--num-gpus", type=int, default=os.environ["SM_NUM_GPUS"])
-
-    train(parser.parse_args())
+#     # Container environment
+#     parser.add_argument("--hosts", type=list, default=json.loads(os.environ["SM_HOSTS"]))
+#     parser.add_argument("--current-host", type=str, default=os.environ["SM_CURRENT_HOST"])
+#     parser.add_argument("--model-dir", type=str, default=os.environ["SM_MODEL_DIR"])
+#     parser.add_argument("--training-dir", type=str, default=os.environ["SM_CHANNEL_TRAINING"])
+#     parser.add_argument("--testing-dir", type=str, default=os.environ["SM_CHANNEL_TESTING"])
+#     parser.add_argument("--num-gpus", type=int, default=os.environ["SM_NUM_GPUS"])
+    args = parse_arguments()
+    train(args)
